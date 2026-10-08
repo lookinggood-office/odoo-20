@@ -1,0 +1,32 @@
+services:
+  web:
+    build: .
+    image: odoo-custom:20.0
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: unless-stopped
+    ports:
+      - "8061:8069"
+    volumes:
+      - ./odoo.conf:/etc/odoo/odoo.conf
+      - ./addons:/mnt/extra-addons
+      - ./odoo-data:/var/lib/odoo
+  db:
+    # Odoo 20 requires PostgreSQL >= 16
+    image: postgres:17
+    ports:
+      - "5431:5432"
+    environment:
+      - POSTGRES_DB=postgres
+      - POSTGRES_PASSWORD=odoo
+      - POSTGRES_USER=odoo
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U odoo -d postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+    restart: unless-stopped
+    volumes:
+      # PG15 data in ./data is not compatible with PG17, use a new directory
+      - ./data-pg17:/var/lib/postgresql/data
